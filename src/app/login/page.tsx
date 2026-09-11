@@ -5,6 +5,10 @@ import LoginForm from "./LoginForm";
 // 환경변수가 빌드 시점에 없어도 빌드가 실패하지 않도록 하는 목적도 있습니다.)
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  return <LoginForm />;
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
+  return <LoginForm initialError={searchParams.error} />;
 }

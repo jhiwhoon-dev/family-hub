@@ -33,9 +33,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/login");
+  const { pathname } = request.nextUrl;
+  const isAuthRoute = pathname.startsWith("/login");
+  // /auth/confirm 은 초대·비밀번호 재설정 링크를 검증해 "세션을 만들어주는" 라우트라
+  // 아직 로그인 전이어도(=user가 없어도) 항상 통과시켜야 합니다.
+  const isPublicRoute = isAuthRoute || pathname.startsWith("/auth/");
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);

@@ -32,10 +32,30 @@ npm run dev
    - 가족 구성원 프로필, 장소/일정/뉴스 테이블과 Row Level Security 정책이 한 번에 생성됩니다.
 3. **Project Settings > API** 에서 `Project URL`, `anon public key` 를 복사해
    `.env.local` 의 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 에 넣습니다.
-4. **가족 계정 만들기**: Authentication > Users > **Invite user** 로 가족 구성원의
-   이메일을 하나씩 초대합니다. 초대 메일의 링크로 비밀번호를 설정하면 바로 로그인할
-   수 있습니다. (회원가입 폼을 따로 만들지 않은 이유: 외부인이 가입하는 것을 막기
-   위해서입니다. 필요하면 나중에 초대 코드 기반 회원가입을 추가할 수 있어요.)
+4. **초대 링크가 실제로 동작하려면 아래 두 가지를 반드시 설정해야 합니다** (기본값은
+   `localhost`로 되어 있어서, 설정하지 않으면 초대 메일의 링크를 눌렀을 때
+   `ERR_CONNECTION_REFUSED` 같은 에러가 납니다):
+
+   - **Authentication > URL Configuration**
+     - **Site URL**: 배포된 실제 주소로 변경 (예: `https://family-hub-xxxx.vercel.app`)
+     - **Redirect URLs**: 실제 배포 주소와 로컬 개발 주소를 모두 추가
+       (예: `https://family-hub-xxxx.vercel.app/**`, `http://localhost:3000/**`)
+   - **Authentication > Email Templates > Invite user**
+     - 기본 템플릿의 링크가 `{{ .ConfirmationURL }}`로 되어 있는데, 이걸 아래처럼
+       바꿔서 우리 앱의 `/auth/confirm` 라우트로 오도록 수정해야 합니다
+       (그래야 링크 클릭 후 `/set-password` 화면에서 비밀번호를 설정할 수 있어요):
+       ```html
+       <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/set-password">가족 계정 활성화하기</a></p>
+       ```
+
+5. **가족 계정 만들기**: Authentication > Users > **Invite user** 로 가족 구성원의
+   이메일을 하나씩 초대합니다. 초대 메일의 링크를 누르면 `/auth/confirm` →
+   `/set-password` 순서로 이동해서 비밀번호를 설정하고 바로 로그인됩니다.
+   (회원가입 폼을 따로 만들지 않은 이유: 외부인이 가입하는 것을 막기 위해서입니다.)
+   - ⚠️ 위 4번 설정을 하기 **전에** 이미 보낸 초대 메일이 있다면, 그 메일의 링크는
+     예전 설정으로 만들어진 것이라 여전히 안 될 수 있습니다. 설정을 마친 뒤
+     Users 목록에서 **Resend invitation** (또는 해당 사용자를 삭제하고 다시 Invite)
+     을 해주세요.
 
 ## 3. 네이버 지도(NCP Maps) API 키 발급
 
@@ -80,6 +100,8 @@ npm run dev
 3. Environment Variables 에 `.env.local` 의 세 값을 그대로 등록합니다.
 4. 배포 후 실제 도메인을 NCP Maps 콘솔의 서비스 URL에도 추가합니다(안 하면 지도가
    로드되지 않습니다).
+5. 배포된 실제 도메인을 Supabase **Authentication > URL Configuration**의 Site URL /
+   Redirect URLs에도 추가합니다 (2단계 4번 참고 — 안 하면 가족 초대 링크가 깨집니다).
 
 ## 폴더 구조
 
@@ -87,6 +109,8 @@ npm run dev
 src/
   app/
     login/                가족 로그인
+    auth/confirm/           초대·비밀번호 재설정 이메일 링크가 도착하는 라우트
+    set-password/           초대 링크로 들어온 뒤 비밀번호를 설정하는 화면
     (protected)/           로그인해야 접근 가능한 영역
       dashboard/            홈 - 요약 대시보드
       places/                가보고 싶은 곳 (지도 + 목록 + 등록/수정)
